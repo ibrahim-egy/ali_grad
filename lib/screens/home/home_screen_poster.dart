@@ -1,4 +1,5 @@
 import 'package:ali_grad/services/task_service.dart';
+import 'package:ali_grad/services/user_service.dart';
 import 'package:ali_grad/widgets/app_bar.dart';
 import 'package:ali_grad/widgets/greeting_banner.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ class HomeScreenPoster extends StatefulWidget {
 
 class _HomeScreenPosterState extends State<HomeScreenPoster> {
   final TaskService taskService = TaskService();
+  final UserService userService = UserService();
   final PageController _pageController = PageController();
 
   List<TaskResponse> unassignedTasks = [];
@@ -223,14 +225,20 @@ class _HomeScreenPosterState extends State<HomeScreenPoster> {
                                                   i == 0 ? Colors.white : null,
                                             ),
                                           ),
-                                          Text(
-                                            task.taskPoster
-                                                .toString(), // You can fetch and show poster username if needed
-                                            style: AppTheme.textStyle2.copyWith(
-                                              fontSize: 10,
-                                              color:
-                                                  i == 0 ? Colors.white : null,
-                                            ),
+                                          FutureBuilder<String?>(
+                                            future: userService.getUsernameById(task.runnerId.toString()),
+                                            builder: (context, snapshot) {
+                                              return Text(
+                                                snapshot.hasData 
+                                                    ? snapshot.data! 
+                                                    : 'Loading...',
+                                                style: AppTheme.textStyle2.copyWith(
+                                                  fontSize: 10,
+                                                  color:
+                                                      i == 0 ? Colors.white : null,
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ],
                                       ),

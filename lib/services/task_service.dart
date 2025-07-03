@@ -221,4 +221,42 @@ class TaskService {
 
     return null;
   }
+
+  Future<bool> updateTaskStatus({
+    required int taskId,
+    required String newStatus, // or TaskStatus if you have an enum
+    required int userId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        print('No token found');
+        return false;
+      }
+
+      final url = Uri.parse(
+          "$taskEndpoint/$taskId/status?newStatus=$newStatus&userId=$userId");
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Task status updated successfully');
+        return true;
+      } else {
+        print('❌ Failed to update task status: \\${response.statusCode}');
+        print('Response body: \\${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error updating task status: $e');
+      return false;
+    }
+  }
 }

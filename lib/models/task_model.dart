@@ -236,6 +236,26 @@ class TaskResponse {
       return null;
     }
 
+    [
+      {
+        "taskId": 95,
+        "taskPoster": 67,
+        "title": "d1",
+        "description": "d1",
+        "type": "Assembly",
+        "longitude": 30.95822,
+        "latitude": 30.002375,
+        "additionalRequirements": {},
+        "status": "IN_PROGRESS",
+        "amount": 999.0,
+        "additionalAttributes": {
+          "estimatedTime": 32,
+          "furnitureType": "d",
+          "toolsRequired": "dq",
+          "instructionsAvailable": true
+        }
+      }
+    ];
     return TaskResponse(
       taskId: json['taskId'],
       taskPoster: json['taskPoster'],

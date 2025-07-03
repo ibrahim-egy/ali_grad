@@ -1,15 +1,19 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/theme.dart';
+import '../services/task_service.dart';
 import 'my_box.dart';
 
 class CurrentTaskCard extends StatefulWidget {
   final String title;
   final String subtitle;
   final String poster;
-  final DateTime date;
+  final String date;
+  final int taskId;
+  final int userId;
 
   const CurrentTaskCard({
     super.key,
@@ -17,6 +21,8 @@ class CurrentTaskCard extends StatefulWidget {
     required this.subtitle,
     required this.poster,
     required this.date,
+    required this.taskId,
+    required this.userId,
   });
 
   @override
@@ -26,15 +32,8 @@ class CurrentTaskCard extends StatefulWidget {
 class _CurrentTaskCardState extends State<CurrentTaskCard>
     with TickerProviderStateMixin {
   bool _isExpanded = false;
-
-  String getTimeAgo(DateTime date) {
-    final diff = DateTime.now().difference(date);
-    if (diff.inSeconds < 60) return "just now";
-    if (diff.inMinutes < 60) return "${diff.inMinutes} min ago";
-    if (diff.inHours < 24) return "${diff.inHours} hours ago";
-    if (diff.inDays < 30) return "${diff.inDays} days ago";
-    return "${date.year}-${date.month}-${date.day}";
-  }
+  bool _isCompleting = false;
+  final TaskService _taskService = TaskService();
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +109,7 @@ class _CurrentTaskCardState extends State<CurrentTaskCard>
                                   Text(widget.subtitle,
                                       style: AppTheme.textStyle2),
                                   const SizedBox(height: AppTheme.paddingSmall),
-                                  Text("Date: ${getTimeAgo(widget.date)}",
+                                  Text("Date: ${widget.date}",
                                       style: AppTheme.textStyle2),
                                 ],
                               ),
@@ -145,17 +144,64 @@ class _CurrentTaskCardState extends State<CurrentTaskCard>
               borderRadius: AppTheme.borderRadius,
             ),
             elevation: 0,
-            onPressed: () {
-              // completion logic
-            },
+            onPressed: _isCompleting
+                ? null
+                : () async {
+                    setState(() => _isCompleting = true);
+
+                    try {
+                      final success = await _taskService.updateTaskStatus(
+                        taskId: widget.taskId,
+                        newStatus: 'DONE',
+                        userId: widget.userId,
+                      );
+
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Task completed successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        // You might want to navigate back or refresh the screen
+                        Navigator.of(context).pop();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Failed to complete task. Please try again.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    } finally {
+                      setState(() => _isCompleting = false);
+                    }
+                  },
             backgroundColor: AppTheme.warningColor,
-            child: const Text(
-              "Complete Task",
-              style: TextStyle(
-                  color: Color(0xFF7d4a29),
-                  fontWeight: FontWeight.bold,
-                  fontSize: AppTheme.paddingMedium),
-            ),
+            child: _isCompleting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF7d4a29),
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    "Complete Task",
+                    style: TextStyle(
+                        color: Color(0xFF7d4a29),
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppTheme.paddingMedium),
+                  ),
           ),
         ],
       ),

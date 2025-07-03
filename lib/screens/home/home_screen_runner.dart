@@ -16,7 +16,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/theme.dart';
 import '../../models/task_model.dart';
 import '../../services/task_service.dart';
+import '../../utils/date.dart';
 import '../offers_screen.dart';
+import '../../services/user_service.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreenRunner extends StatefulWidget {
   const HomeScreenRunner({super.key});
@@ -27,6 +30,7 @@ class HomeScreenRunner extends StatefulWidget {
 
 class _HomeScreenRunnerState extends State<HomeScreenRunner> {
   List<TaskResponse> nearTasks = [];
+  List<TaskResponse> acceptedTasks = [];
 
   Position? currentUserPosition;
   OfferService offerService = OfferService();
@@ -103,6 +107,18 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
     super.initState();
     getCurrentLocation();
     fetchNearbyTasks();
+    fetchAcceptedTasks();
+  }
+
+  Future<void> fetchAcceptedTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+    if (userId == null) return;
+    final tasks = await offerService.getAcceptedOffersTasks(int.parse(userId));
+    if (!mounted) return;
+    setState(() {
+      acceptedTasks = tasks;
+    });
   }
 
   Future<void> fetchNearbyTasks() async {
@@ -121,9 +137,6 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
       print("Failed to get location");
       return;
     }
-
-    print(userId);
-
     final tasks = await service.getNearbyTasks(
       radius: _radius,
       latitude: currentUserPosition!.latitude,
@@ -145,18 +158,38 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
       body: RefreshIndicator(
         onRefresh: () async {
           await fetchNearbyTasks();
+          await fetchAcceptedTasks();
         },
         child: ListView(
           padding: EdgeInsets.all(AppTheme.paddingMedium),
           children: [
             GreetingBanner(name: "Ali", location: "Giza"),
             SizedBox(height: AppTheme.paddingMedium),
-            CurrentTaskCard(
-              title: "Move Furniture to new apartment",
-              subtitle: "Moving large furniture to 5th floor",
-              poster: "Sarah M.",
-              date: DateTime(2025, 1, 1),
-            ),
+            // Accepted (in progress) tasks section
+            if (acceptedTasks.isNotEmpty) ...[
+              FutureBuilder<String?>(
+                future: UserService().getUsernameById(acceptedTasks[0].taskPoster.toString()),
+                builder: (context, snapshot) {
+                  final posterName = snapshot.data ?? 'Poster';
+                  return FutureBuilder<String?>(
+                    future: SharedPreferences.getInstance().then((prefs) => prefs.getString('userId')),
+                    builder: (context, userIdSnapshot) {
+                      return CurrentTaskCard(
+                        title: acceptedTasks[0].title,
+                        subtitle: acceptedTasks[0].description,
+                        poster: snapshot.connectionState == ConnectionState.waiting
+                            ? 'Loading...'
+                            : posterName,
+                        date: DateFormat('dd-MM-yyyy')
+                            .format(DateTime.parse(acceptedTasks[0].createdDate ?? DateTime.now().toIso8601String())),
+                        taskId: acceptedTasks[0].taskId,
+                        userId: int.parse(userIdSnapshot.data ?? '0'),
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
             SizedBox(height: AppTheme.paddingLarge),
             // Tasks Near You header and Radius selector
             Row(
