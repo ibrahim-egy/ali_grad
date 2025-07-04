@@ -290,4 +290,49 @@ class TaskService {
       return false;
     }
   }
+
+  Future<bool> editTask(int taskId, dynamic taskRequest) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) {
+        print('❌ No token found - User needs to login again');
+        await _userService.handleInvalidToken();
+        return false;
+      }
+      // Validate token before making request
+      final isTokenValid = await _userService.isTokenValid();
+      if (!isTokenValid) {
+        print('❌ Token is invalid or expired');
+        await _userService.handleInvalidToken();
+        return false;
+      }
+      print('📤 Edit Task body: ${jsonEncode(taskRequest.toJson())}');
+      final response = await http.put(
+        Uri.parse('$taskEndpoint/edit/$taskId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(taskRequest.toJson()),
+      );
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        print('✅ Task edited successfully');
+        return true;
+      } else if (response.statusCode == 401) {
+        print('❌ Authentication failed - Token may be expired or invalid');
+        await _userService.handleInvalidToken();
+        return false;
+      } else {
+        print('❌ Failed to edit task: ${response.statusCode}');
+        print('Body: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error editing task: $e');
+      return false;
+    }
+  }
 }

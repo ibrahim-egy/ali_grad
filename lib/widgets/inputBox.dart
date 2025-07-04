@@ -49,7 +49,9 @@ class _InputBoxState extends State<InputBox> {
           controller: widget.controller,
           obscureText: _obscureText,
           onChanged: widget.onChanged,
-          keyboardType: widget.isNumber ? TextInputType.numberWithOptions(decimal: true) : null,
+          keyboardType: widget.isNumber
+              ? TextInputType.numberWithOptions(decimal: true)
+              : null,
           inputFormatters: widget.isNumber
               ? [FilteringTextInputFormatter.allow(RegExp(r'^[0-9]*\.?[0-9]*'))]
               : null,
@@ -57,15 +59,29 @@ class _InputBoxState extends State<InputBox> {
             hintText: widget.hintText,
             hintStyle: AppTheme.textStyle2
                 .copyWith(color: AppTheme.textColor1.withValues(alpha: .7)),
+            filled: true,
+            fillColor: AppTheme.dividerColor,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.paddingSmall),
+              borderSide: BorderSide.none,
+            ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Colors.grey),
+              borderRadius: BorderRadius.circular(AppTheme.paddingSmall),
+              borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+              borderRadius: BorderRadius.circular(AppTheme.paddingSmall),
+              borderSide: BorderSide.none,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.paddingSmall),
+              borderSide: BorderSide.none,
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.paddingSmall),
+              borderSide: BorderSide.none,
             ),
             suffixIcon: widget.obscure
                 ? IconButton(

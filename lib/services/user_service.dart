@@ -172,10 +172,19 @@ class UserService {
     required String phoneNumber,
   }) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        print('No token found');
+        return false;
+      }
+
       final response = await http.put(
-        Uri.parse("$authEndpoint/api/user/profile/basic?userId=$userId"),
+        Uri.parse("$authEndpoint/auth/profile/basic?userId=$userId"),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
           "firstName": firstName,
@@ -235,11 +244,11 @@ class UserService {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
       final userId = prefs.getString('userId');
-      
+
       if (token == null || userId == null) {
         return false;
       }
-      
+
       return await isTokenValid();
     } catch (e) {
       print("❌ Error checking login status: $e");
@@ -267,7 +276,7 @@ class UserService {
       if (token != null) {
         final isExpired = JwtDecoder.isExpired(token);
         print("Token expired: $isExpired");
-        
+
         if (!isExpired) {
           final decodedToken = JwtDecoder.decode(token);
           print("Token payload: $decodedToken");

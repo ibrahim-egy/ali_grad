@@ -84,6 +84,7 @@ class EventApplicationService {
         if (token != null) 'Authorization': 'Bearer $token',
       },
     );
+    print(response.body);
     return response.statusCode == 200;
   }
 
@@ -106,7 +107,7 @@ class EventApplicationService {
     }
   }
 
-  Future<List<EventApplication>> getApplicantsForTask(int taskId) async {
+  Future<List<EventAppResponse>> getApplicantsForTask(int taskId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     final url = Uri.parse('$baseUrl/task/$taskId/applicants');
@@ -119,16 +120,16 @@ class EventApplicationService {
     );
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => EventApplication.fromJson(json)).toList();
+      return data.map((json) => EventAppResponse.fromJson(json)).toList();
     } else {
       return [];
     }
   }
 
-  Future<bool> approveApplication(int applicationId) async {
+  Future<bool> approveApplication(int taskPoster, int applicationId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    final url = Uri.parse('$baseUrl/approve/$applicationId');
+    final url = Uri.parse('$baseUrl/$taskPoster/approve/$applicationId');
     final response = await http.put(
       url,
       headers: {
@@ -136,6 +137,8 @@ class EventApplicationService {
         if (token != null) 'Authorization': 'Bearer $token',
       },
     );
+
+    print(response.body);
     return response.statusCode == 200;
   }
 
@@ -166,6 +169,60 @@ class EventApplicationService {
         if (token != null) 'Authorization': 'Bearer $token',
       },
     );
+    print(response.body);
     return response.statusCode == 200;
+  }
+
+  Future<int?> getRemainingSeats(int taskId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final url = Uri.parse('$baseUrl/remaining-seats/$taskId');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      return int.tryParse(response.body);
+    } else {
+      return null;
+    }
+  }
+
+  Future<bool> hasRunnerApplied(int taskId, int runnerId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        print("❌ No token found for checking if runner has applied");
+        return false;
+      }
+
+      final url = Uri.parse('$baseUrl/exists?taskId=$taskId&runnerId=$runnerId');
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+      print("📡 Check if runner has applied response status: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        print("✅ Runner has already applied to this event");
+        return true;
+      } else if (response.statusCode == 400) {
+        print("❌ Runner has not applied to this event");
+        return false;
+      } else {
+        print("❌ Failed to check if runner has applied: ${response.statusCode}");
+        print("Body: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("❌ Error checking if runner has applied: $e");
+      return false;
+    }
   }
 }

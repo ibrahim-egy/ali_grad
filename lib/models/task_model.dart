@@ -170,9 +170,6 @@ class EventStaffingTask {
   }
 }
 
-/// Model representing a Task returned from the backend (response)
-// lib/models/task_model.dart
-
 class TaskResponse {
   final int taskId;
   final int taskPoster;
@@ -236,26 +233,6 @@ class TaskResponse {
       return null;
     }
 
-    [
-      {
-        "taskId": 95,
-        "taskPoster": 67,
-        "title": "d1",
-        "description": "d1",
-        "type": "Assembly",
-        "longitude": 30.95822,
-        "latitude": 31.002375,
-        "additionalRequirements": {},
-        "status": "IN_PROGRESS",
-        "amount": 999.0,
-        "additionalAttributes": {
-          "estimatedTime": 32,
-          "furnitureType": "d",
-          "toolsRequired": "dq",
-          "instructionsAvailable": true
-        }
-      }
-    ];
     return TaskResponse(
       taskId: json['taskId'],
       taskPoster: json['taskPoster'],

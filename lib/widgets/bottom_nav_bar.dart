@@ -58,19 +58,7 @@ class PosterBottomNavBar extends StatelessWidget {
             activeIcon: Icon(Icons.list_alt, size: iconSize),
             label: 'My Tasks',
           ),
-          BottomNavigationBarItem(
-            icon: _buildBadgeIcon(
-              Icons.handshake_outlined,
-              offersCount,
-              active: false,
-            ),
-            activeIcon: _buildBadgeIcon(
-              Icons.handshake,
-              offersCount,
-              active: true,
-            ),
-            label: 'Offers',
-          ),
+
           BottomNavigationBarItem(
             icon: _buildBadgeIcon(
               Icons.chat_bubble_outline,

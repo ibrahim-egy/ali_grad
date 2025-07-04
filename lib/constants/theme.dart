@@ -37,7 +37,7 @@ class AppTheme {
   static const Color backgroundColor = Color(0xFFFFFfff);
   static const Color sectionBgColor = Color(0xFFFFFAE3);
   static const Color cardColor = Color(0xfff3f4f6);
-  static const Color dividerColor = Color(0xffffffff);
+  static const Color dividerColor = Color(0xffF5F6FA);
   static const Color disabledColor = Color(0xFFe0e0e0);
 
   // Status colors

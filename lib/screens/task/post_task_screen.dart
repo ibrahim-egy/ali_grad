@@ -6,10 +6,10 @@ import '../../services/task_service.dart';
 import '../../utils/location.dart';
 import '../../widgets/inputBox.dart';
 import 'package:hugeicons/hugeicons.dart';
-import '../../services/user_service.dart';
 
 class PostTaskScreen extends StatefulWidget {
-  const PostTaskScreen({Key? key}) : super(key: key);
+  final TaskResponse? taskToEdit;
+  const PostTaskScreen({Key? key, this.taskToEdit}) : super(key: key);
 
   @override
   _PostTaskScreenState createState() => _PostTaskScreenState();
@@ -52,6 +52,10 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
   final _daysCtrl = TextEditingController();
   bool _isSubmitting = false;
 
+  // Add requirements state
+  List<String> _requirements = [];
+  final List<TextEditingController> _requirementCtrls = [];
+
   @override
   void dispose() {
     _titleCtrl.dispose();
@@ -64,6 +68,7 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
     _startDateCtrl.dispose();
     _endDateCtrl.dispose();
     _daysCtrl.dispose();
+    _requirementCtrls.forEach((c) => c.dispose());
     super.dispose();
   }
 
@@ -81,46 +86,77 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
     });
   }
 
+  Widget _buildRequirementsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Text('Add Requirements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4F46E5))),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.add, color: Color(0xFF4F46E5)),
+              onPressed: () {
+                setState(() {
+                  _requirements.add('');
+                  _requirementCtrls.add(TextEditingController());
+                });
+              },
+            ),
+          ],
+        ),
+        ..._requirements.asMap().entries.map((entry) {
+          int idx = entry.key;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _requirementCtrls[idx],
+                    onChanged: (val) {
+                      _requirements[idx] = val;
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Add a requirement',
+                      filled: true,
+                      fillColor: const Color(0xFFF5F6FA),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Color(0xFF4F46E5)),
+                  onPressed: () {
+                    setState(() {
+                      _requirements.removeAt(idx);
+                      _requirementCtrls.removeAt(idx).dispose();
+                    });
+                  },
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   Future<void> _submit() async {
     if (_selectedCategory == null) return;
     setState(() => _isSubmitting = true);
-    
-    // Validate token before proceeding
-    final userService = UserService();
-    
-    // Debug current auth state
-    await userService.debugAuthState();
-    
-    final isTokenValid = await userService.isTokenValid();
-    
-    if (!isTokenValid) {
-      setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Authentication failed. Please login again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      // Navigate to login screen
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-      return;
-    }
-
     final prefs = await SharedPreferences.getInstance();
     final userId = int.tryParse(prefs.getString('userId') ?? '0') ?? 0;
-    
-    if (userId == 0) {
-      setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User ID not found. Please login again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-      return;
-    }
-
+    // Convert requirements to map
+    final requirementsMap = {
+      for (int i = 0; i < _requirements.length; i++) 'R${i + 1}': _requirements[i]
+    };
     dynamic taskRequest;
     if (_selectedCategory == Category.EVENT_STAFFING) {
       taskRequest = EventStaffingTask(
@@ -129,7 +165,7 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
         description: _descCtrl.text,
         latitude: latitude,
         longitude: longitude,
-        additionalRequirements: {},
+        additionalRequirements: requirementsMap,
         fixedPay: double.tryParse(_fixedPayCtrl.text) ?? 0.0,
         requiredPeople: int.tryParse(_peopleCtrl.text) ?? 0,
         location: _locationDetailCtrl.text,
@@ -146,6 +182,7 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
         latitude: latitude,
         longitude: longitude,
         amount: double.tryParse(_amountCtrl.text) ?? 0.0,
+        additionalRequirements: requirementsMap,
         additionalAttributes: {
           for (var schema in regularSchemas[_selectedCategory]!)
             schema.key: () {
@@ -165,19 +202,21 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
         },
       );
     }
-    print("REQ: ");
-    print(taskRequest.toJson());
     final service = TaskService();
-    final success = await service.postTask(taskRequest);
+    bool success;
+    if (widget.taskToEdit != null) {
+      // Edit mode
+      success = await service.editTask(widget.taskToEdit!.taskId, taskRequest);
+    } else {
+      // New task
+      success = await service.postTask(taskRequest);
+    }
     setState(() => _isSubmitting = false);
     if (success) {
       Navigator.pushNamed(context, "/poster-home");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to create task. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Failed to create/edit task')),
       );
     }
   }
@@ -186,6 +225,49 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
   void initState() {
     super.initState();
     _loadLocation();
+    if (widget.taskToEdit != null) {
+      final t = widget.taskToEdit!;
+      _selectedCategory = t.category;
+      _titleCtrl.text = t.title;
+      _descCtrl.text = t.description;
+      latitude = t.latitude;
+      longitude = t.longitude;
+      // Prefill requirements
+      _requirements = [];
+      _requirementCtrls.clear();
+      if (t.additionalRequirements.isNotEmpty) {
+        t.additionalRequirements.forEach((key, value) {
+          _requirements.add(value.toString());
+          _requirementCtrls.add(TextEditingController(text: value.toString()));
+        });
+      }
+      // Prefill regular or event fields
+      if (_selectedCategory == Category.EVENT_STAFFING) {
+        _fixedPayCtrl.text = t.fixedPay?.toString() ?? '';
+        _peopleCtrl.text = t.requiredPeople?.toString() ?? '';
+        _locationDetailCtrl.text = t.location ?? '';
+        _startDateCtrl.text = t.startDate ?? '';
+        _endDateCtrl.text = t.endDate ?? '';
+        _daysCtrl.text = t.numberOfDays?.toString() ?? '';
+      } else {
+        _amountCtrl.text = t.amount?.toString() ?? '';
+        final schema = regularSchemas[_selectedCategory] ?? [];
+        for (var field in schema) {
+          _attrCtrls[field.key] = TextEditingController(
+            text: t.additionalAttributes?[field.key]?.toString() ?? '',
+          );
+        }
+      }
+    } else {
+      // Initialize _attrCtrls for the default category if not EVENT_STAFFING
+      if (_selectedCategory != null &&
+          _selectedCategory != Category.EVENT_STAFFING) {
+        final schema = regularSchemas[_selectedCategory] ?? [];
+        for (var field in schema) {
+          _attrCtrls[field.key] = TextEditingController();
+        }
+      }
+    }
   }
 
   // Progress bar widget
@@ -214,6 +296,40 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
 
   // Step 1: Category selection
   Widget _buildCategorySection() {
+    if (widget.taskToEdit != null) {
+      // Show as label if editing
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Category', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.dividerColor),
+            ),
+            child: Text(_selectedCategory?.name ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _currentStep = 1;
+                    });
+                  },
+                  child: const Text('Continue'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
     final categories = Category.values;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -378,6 +494,8 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
             obscure: false,
             controller: _descCtrl,
             onChanged: (_) => setState(() {})),
+        const SizedBox(height: 16),
+        _buildRequirementsSection(),
         if (isRegular) ...[
           const SizedBox(height: 16),
           InputBox(
@@ -441,32 +559,37 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
       final isStartDateFilled = _startDateCtrl.text.trim().isNotEmpty;
       final isEndDateFilled = _endDateCtrl.text.trim().isNotEmpty;
       final isDaysFilled = _daysCtrl.text.trim().isNotEmpty;
-      final canContinue = isFixedPayFilled && isPeopleFilled && isLocationFilled && isStartDateFilled && isEndDateFilled && isDaysFilled;
+      final canContinue = isFixedPayFilled &&
+          isPeopleFilled &&
+          isLocationFilled &&
+          isStartDateFilled &&
+          isEndDateFilled &&
+          isDaysFilled;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           InputBox(
-              label: 'Fixed Pay',
-              hintText: 'Enter fixed pay',
-              obscure: false,
-              controller: _fixedPayCtrl,
-              onChanged: (_) => setState(() {}),
+            label: 'Fixed Pay',
+            hintText: 'Enter fixed pay',
+            obscure: false,
+            controller: _fixedPayCtrl,
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
           InputBox(
-              label: 'Required People',
-              hintText: 'Enter number of people',
-              obscure: false,
-              controller: _peopleCtrl,
-              onChanged: (_) => setState(() {}),
+            label: 'Required People',
+            hintText: 'Enter number of people',
+            obscure: false,
+            controller: _peopleCtrl,
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
           InputBox(
-              label: 'Location',
-              hintText: 'Enter event location',
-              obscure: false,
-              controller: _locationDetailCtrl,
-              onChanged: (_) => setState(() {}),
+            label: 'Location',
+            hintText: 'Enter event location',
+            obscure: false,
+            controller: _locationDetailCtrl,
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -480,7 +603,8 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
                 lastDate: DateTime(2100),
               );
               if (picked != null) {
-                String formatted = "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                String formatted =
+                    "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
                 setState(() {
                   _startDateCtrl.text = formatted;
                 });
@@ -505,7 +629,8 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
                 lastDate: DateTime(2100),
               );
               if (picked != null) {
-                String formatted = "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                String formatted =
+                    "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
                 setState(() {
                   _endDateCtrl.text = formatted;
                 });
@@ -520,11 +645,11 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
           ),
           const SizedBox(height: 12),
           InputBox(
-              label: 'Number of Days',
-              hintText: 'Enter total days',
-              obscure: false,
-              controller: _daysCtrl,
-              onChanged: (_) => setState(() {}),
+            label: 'Number of Days',
+            hintText: 'Enter total days',
+            obscure: false,
+            controller: _daysCtrl,
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 24),
           Row(
@@ -702,26 +827,7 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Post a Task'),
-        actions: [
-          // Debug button for troubleshooting
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () async {
-              final userService = UserService();
-              await userService.debugAuthState();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Check console for auth debug info'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            tooltip: 'Debug Auth',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Post a Task')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Column(

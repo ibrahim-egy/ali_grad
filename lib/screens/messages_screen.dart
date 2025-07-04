@@ -38,7 +38,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     // Debug: Print the current user ID
-    print('Current userId: ' + currentUserId!);
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ChatService().recentChats(currentUserId!),
       builder: (context, snapshot) {
@@ -46,8 +45,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         final chats = snapshot.data ?? [];
-        // Debug: Print the chats list
-        print('Chats: ' + chats.toString());
         final users = chats.map((chat) {
           final isUser1 = chat['user1Id'] == currentUserId;
           final otherId = isUser1 ? chat['user2Id'] : chat['user1Id'];

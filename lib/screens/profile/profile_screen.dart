@@ -21,6 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String lastName = "";
   String role = "";
   String userInitials = "";
+  double balance = 0.0;
 
   bool isLoading = true;
 
@@ -35,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         lastName = userData.lastName;
         userInitials = "${firstName[0]} ${lastName[0]}";
         role = prefs.getString('role')!;
+        balance = userData.balance;
         isLoading = false;
       });
     } else {
@@ -84,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   Expanded(
-                    flex: 3,
+                    flex: 4,
                     child: MyBox(
                       backgroundColor: AppTheme.primaryColor,
                       boxPadding: 0,
@@ -152,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Column(
                                 children: [
                                   Text(
-                                    "0",
+                                    balance.toStringAsFixed(2),
                                     style: AppTheme.textStyle0
                                         .copyWith(color: AppTheme.textColor2),
                                   ),
@@ -160,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     height: AppTheme.paddingSmall,
                                   ),
                                   Text(
-                                    "Earnings",
+                                    role == "poster" ? "Balance" : "Earnings",
                                     style: AppTheme.textStyle2.copyWith(
                                         color: AppTheme.disabledColor),
                                   )
@@ -211,6 +213,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           GestureDetector(
+                            onTap: () {},
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    borderRadius: AppTheme.borderRadius,
+                                    color: AppTheme.primaryColor
+                                        .withValues(alpha: .3),
+                                  ),
+                                  child:
+                                      Icon(HugeIcons.strokeRoundedFingerAccess),
+                                ),
+                                SizedBox(
+                                  width: AppTheme.paddingSmall,
+                                ),
+                                Text(
+                                  "Change password",
+                                  style: AppTheme.textStyle0
+                                      .copyWith(fontSize: 16),
+                                ),
+                                Spacer(),
+                                Icon(HugeIcons.strokeRoundedArrowRight01)
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
                             onTap: () =>
                                 {Navigator.pushNamed(context, "/edit-profile")},
                             child: Row(
@@ -237,54 +267,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Icon(HugeIcons.strokeRoundedArrowRight01)
                               ],
                             ),
-                          ),
-                          Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  borderRadius: AppTheme.borderRadius,
-                                  color: AppTheme.primaryColor
-                                      .withValues(alpha: .3),
-                                ),
-                                child: Icon(HugeIcons.strokeRoundedWorkoutRun),
-                              ),
-                              SizedBox(
-                                width: AppTheme.paddingSmall,
-                              ),
-                              Text(
-                                "Payment History",
-                                style:
-                                    AppTheme.textStyle0.copyWith(fontSize: 16),
-                              ),
-                              Spacer(),
-                              Icon(HugeIcons.strokeRoundedArrowRight01)
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  borderRadius: AppTheme.borderRadius,
-                                  color: AppTheme.primaryColor
-                                      .withValues(alpha: .3),
-                                ),
-                                child: Icon(HugeIcons.strokeRoundedWorkoutRun),
-                              ),
-                              SizedBox(
-                                width: AppTheme.paddingSmall,
-                              ),
-                              Text(
-                                "Become a runner",
-                                style:
-                                    AppTheme.textStyle0.copyWith(fontSize: 16),
-                              ),
-                              Spacer(),
-                              Icon(HugeIcons.strokeRoundedArrowRight01)
-                            ],
                           ),
                           GestureDetector(
                             onTap: logout,

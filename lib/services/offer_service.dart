@@ -262,6 +262,41 @@ class OfferService {
     }
   }
 
+  Future<bool> hasRunnerOffered(int taskId, int runnerId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        print("❌ No token found for checking if runner has offered");
+        return false;
+      }
+
+      final url = Uri.parse('$offerEndpoint/exists?taskId=$taskId&runnerId=$runnerId');
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+      print("📡 Check if runner has offered response status: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        print("✅ Runner has already offered on this task");
+        return true;
+      } else if (response.statusCode == 400) {
+        print("❌ Runner has not offered on this task");
+        return false;
+      } else {
+        print("❌ Failed to check if runner has offered: ${response.statusCode}");
+        print("Body: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("❌ Error checking if runner has offered: $e");
+      return false;
+    }
+  }
+
   // Future<bool> updateOfferStatus(int offerId, OfferStatus status) async {
   //   final prefs = await SharedPreferences.getInstance();
   //   final token = prefs.getString('token');

@@ -164,7 +164,7 @@ class _CurrentTaskCardState extends State<CurrentTaskCard>
                           ),
                         );
                         // You might want to navigate back or refresh the screen
-                        Navigator.of(context).pop();
+                        Navigator.pushNamed(context, "/runner-home");
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(

@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 
-class GreetingBanner extends StatelessWidget {
-  final String name;
+class GreetingBanner extends StatefulWidget {
   final String? location;
   final double? customHeight;
 
   const GreetingBanner({
     Key? key,
-    required this.name,
     this.location,
     this.customHeight,
   }) : super(key: key);
+
+  @override
+  State<GreetingBanner> createState() => _GreetingBannerState();
+}
+
+class _GreetingBannerState extends State<GreetingBanner> {
+  String username = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    final fetchedUsername = prefs.getString('username') ?? 'User';
+    setState(() {
+      username = fetchedUsername;
+    });
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -32,7 +52,7 @@ class GreetingBanner extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Hi, $name",
+          "Hi, $username",
           style: AppTheme.textStyle0,
         ),
         Text(

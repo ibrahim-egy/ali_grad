@@ -90,7 +90,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
       });
       return;
     }
-    final fetchedApplications = await EventApplicationService().getTasksForRunner(int.parse(runnerId));
+    final fetchedApplications =
+        await EventApplicationService().getTasksForRunner(int.parse(runnerId));
     setState(() {
       eventApplications = fetchedApplications;
       isLoadingApplications = false;
@@ -120,21 +121,22 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
           title: const Text('My Offers & Applications'),
           backgroundColor: AppTheme.primaryColor,
           elevation: 0,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: () {
-                fetchOffers();
-                fetchEventApplications();
-              },
-              tooltip: 'Refresh',
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/runner-home',
+              (route) => false,
             ),
-          ],
+          ),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Offers'),
               Tab(text: 'Event Applications'),
             ],
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
           ),
         ),
         backgroundColor: AppTheme.backgroundColor,
@@ -162,7 +164,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                               elevation: 3,
                               color: Colors.white,
                               child: Padding(
-                                padding: const EdgeInsets.all(AppTheme.paddingLarge),
+                                padding:
+                                    const EdgeInsets.all(AppTheme.paddingLarge),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -173,7 +176,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                                     Row(
                                       children: [
                                         Icon(Icons.attach_money,
-                                            color: AppTheme.primaryColor, size: 20),
+                                            color: AppTheme.primaryColor,
+                                            size: 20),
                                         const SizedBox(width: 6),
                                         Text('Amount: ${offer.amount} EGP',
                                             style: AppTheme.textStyle1
@@ -185,10 +189,12 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                                       Row(
                                         children: [
                                           Icon(Icons.comment,
-                                              color: AppTheme.textColor1, size: 18),
+                                              color: AppTheme.textColor1,
+                                              size: 18),
                                           const SizedBox(width: 6),
                                           Expanded(
-                                              child: Text('Comment: ${offer.comment}',
+                                              child: Text(
+                                                  'Comment: ${offer.comment}',
                                                   style: AppTheme.textStyle2)),
                                         ],
                                       ),
@@ -197,7 +203,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                                     Row(
                                       children: [
                                         Icon(Icons.info_outline,
-                                            color: AppTheme.textColor1, size: 18),
+                                            color: AppTheme.textColor1,
+                                            size: 18),
                                         const SizedBox(width: 6),
                                         Text(
                                             'Status: ${offer.status.toString().split('.').last}',
@@ -206,7 +213,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                                         if (offer.status == OfferStatus.PENDING)
                                           ElevatedButton.icon(
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppTheme.urgentColor,
+                                              backgroundColor:
+                                                  AppTheme.urgentColor,
                                               shape: RoundedRectangleBorder(
                                                 borderRadius:
                                                     BorderRadius.circular(12),
@@ -217,8 +225,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                                             icon: const Icon(Icons.close,
                                                 color: Colors.white, size: 18),
                                             label: const Text('Cancel Offer',
-                                                style:
-                                                    TextStyle(color: Colors.white)),
+                                                style: TextStyle(
+                                                    color: Colors.white)),
                                           ),
                                       ],
                                     ),
@@ -235,7 +243,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
               child: isLoadingApplications
                   ? const Center(child: CircularProgressIndicator())
                   : (eventApplications == null || eventApplications!.isEmpty)
-                      ? const Center(child: Text('No event applications found.'))
+                      ? const Center(
+                          child: Text('No event applications found.'))
                       : ListView.separated(
                           padding: const EdgeInsets.all(AppTheme.paddingLarge),
                           separatorBuilder: (_, __) =>
@@ -250,7 +259,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                               elevation: 3,
                               color: Colors.white,
                               child: Padding(
-                                padding: const EdgeInsets.all(AppTheme.paddingLarge),
+                                padding:
+                                    const EdgeInsets.all(AppTheme.paddingLarge),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -261,7 +271,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                                     Row(
                                       children: [
                                         Icon(Icons.event,
-                                            color: AppTheme.primaryColor, size: 20),
+                                            color: AppTheme.primaryColor,
+                                            size: 20),
                                         const SizedBox(width: 6),
                                         Text('Event Task',
                                             style: AppTheme.textStyle1
@@ -279,7 +290,8 @@ class _RunnerOffersScreenState extends State<RunnerOffersScreen>
                                     Row(
                                       children: [
                                         Icon(Icons.info_outline,
-                                            color: AppTheme.textColor1, size: 18),
+                                            color: AppTheme.textColor1,
+                                            size: 18),
                                         const SizedBox(width: 6),
                                         Text(
                                             'Status: Accepted', // You can update this if you fetch application status

@@ -29,7 +29,6 @@ class _RunnerShellState extends State<RunnerShell> {
 
   static const _pages = [
     HomeScreenRunner(),
-    MyTasksScreenRunner(),
     RunnerOffersScreen(),
     MessagesTab(),
   ];
@@ -53,11 +52,6 @@ class _RunnerShellState extends State<RunnerShell> {
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined),
-            activeIcon: Icon(Icons.assignment),
-            label: 'My Tasks',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.assignment_turned_in_outlined),

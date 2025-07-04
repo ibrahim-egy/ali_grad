@@ -1,4 +1,7 @@
+import 'package:ali_grad/constants/theme.dart';
+import 'package:ali_grad/widgets/app_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 
 class ChatUser {
   final String userId;
@@ -19,13 +22,32 @@ class ChatUser {
 class ChatMessages extends StatelessWidget {
   final List<ChatUser> users;
   final void Function(ChatUser user) onChatTap;
-  const ChatMessages({Key? key, required this.users, required this.onChatTap}) : super(key: key);
+  const ChatMessages({Key? key, required this.users, required this.onChatTap})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     if (users.isEmpty) {
-      return const Center(
-        child: Text('No chats yet', style: TextStyle(fontSize: 16, color: Colors.grey)),
+      return Scaffold(
+        appBar: CustomAppBar(title: "Chats"),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                'assets/svg/no_chats.svg',
+                width: 100,
+                height: 100,
+                semanticsLabel: 'Logo',
+              ),
+              SizedBox(
+                height: AppTheme.paddingMedium,
+              ),
+              Text('No chats yet',
+                  style: TextStyle(fontSize: 16, color: Colors.grey)),
+            ],
+          ),
+        ),
       );
     }
     return ListView.separated(
@@ -33,35 +55,42 @@ class ChatMessages extends StatelessWidget {
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
       itemBuilder: (context, i) {
         final user = users[i];
-        return ListTile(
-          onTap: () => onChatTap(user),
-          leading: user.avatarUrl != null
-              ? CircleAvatar(
-                  backgroundImage: NetworkImage(user.avatarUrl!),
-                  radius: 28,
-                )
-              : CircleAvatar(
-                  radius: 28,
-                  child: Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : '?'),
-                ),
-          title: Text(
-            user.username,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+        return Material(
+          color: Colors.transparent,
+          child: ListTile(
+            onTap: () => onChatTap(user),
+            leading: user.avatarUrl != null
+                ? CircleAvatar(
+                    backgroundImage: NetworkImage(user.avatarUrl!),
+                    radius: 28,
+                  )
+                : CircleAvatar(
+                    radius: 28,
+                    child: Text(user.username.isNotEmpty
+                        ? user.username[0].toUpperCase()
+                        : '?'),
+                  ),
+            title: Text(
+              user.username,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+            ),
+            subtitle: Text(
+              user.lastMessage,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 15, color: Colors.black54),
+            ),
+            trailing: Text(
+              _formatTime(user.lastTimestamp),
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            tileColor: Colors.white,
+            hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.04),
           ),
-          subtitle: Text(
-            user.lastMessage,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 15, color: Colors.black54),
-          ),
-          trailing: Text(
-            _formatTime(user.lastTimestamp),
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          tileColor: Colors.white,
-          hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.04),
         );
       },
     );

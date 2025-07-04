@@ -3,6 +3,7 @@ import 'package:ali_grad/services/user_service.dart';
 import 'package:ali_grad/widgets/app_bar.dart';
 import 'package:ali_grad/widgets/greeting_banner.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../models/task_model.dart';
 import '../../widgets/TaskCard.dart';
 import '../../utils/location.dart';
+import '../task/task_details.dart';
 
 class HomeScreenPoster extends StatefulWidget {
   const HomeScreenPoster({Key? key}) : super(key: key);
@@ -25,11 +27,9 @@ class HomeScreenPoster extends StatefulWidget {
 class _HomeScreenPosterState extends State<HomeScreenPoster> {
   final TaskService taskService = TaskService();
   final UserService userService = UserService();
-  final PageController _pageController = PageController();
 
   List<TaskResponse> unassignedTasks = [];
   List<TaskResponse> ongoingTasks = [];
-  int _currentPage = 0;
   bool _isLoading = true;
   bool _isLoadingOngoing = true;
 
@@ -118,6 +118,27 @@ class _HomeScreenPosterState extends State<HomeScreenPoster> {
     );
   }
 
+  IconData _getCategoryIcon(Category category) {
+    switch (category) {
+      case Category.Cleaning:
+        return HugeIcons.strokeRoundedClean;
+      case Category.Delivery:
+        return HugeIcons.strokeRoundedShippingTruck01;
+      case Category.Assembly:
+        return HugeIcons.strokeRoundedTools;
+      case Category.Handyman:
+        return HugeIcons.strokeRoundedLegalHammer;
+      case Category.Lifting:
+        return HugeIcons.strokeRoundedPackageRemove;
+      case Category.Custom:
+        return HugeIcons.strokeRoundedIdea01;
+      case Category.EVENT_STAFFING:
+        return Icons.event;
+      default:
+        return Icons.category;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,168 +152,177 @@ class _HomeScreenPosterState extends State<HomeScreenPoster> {
         child: ListView(
           padding: const EdgeInsets.all(AppTheme.paddingMedium),
           children: [
-            const GreetingBanner(name: "Ali"),
+            const GreetingBanner(),
             SizedBox(
               height: AppTheme.paddingMedium,
             ),
             // On Going Tasks Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("On Going Tasks", style: AppTheme.headerTextStyle),
-                TextButton(
-                  onPressed: () {}, // Navigate to all tasks if needed
-                  child: Text(
-                    "View all",
-                    style: AppTheme.textStyle1.copyWith(
-                      fontWeight: FontWeight.w100,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            Text("On Going Tasks", style: AppTheme.headerTextStyle),
             const SizedBox(height: AppTheme.paddingMedium),
 
             // PageView for tasks overview
-            SizedBox(
-              height: 180,
-              child: _isLoadingOngoing
-                  ? const Center(child: CircularProgressIndicator())
-                  : (ongoingTasks.isEmpty)
-                      ? const Center(child: Text("No ongoing tasks found."))
-                      : PageView.builder(
-                          controller: _pageController,
+            _isLoadingOngoing
+                ? const Center(child: CircularProgressIndicator())
+                : (ongoingTasks.isEmpty)
+                    ? MyBox(
+                        boxPadding: AppTheme.paddingLarge,
+                        borderWidth: 4,
+                        borderColor: AppTheme.primaryColor,
+                        backgroundColor: Colors.white,
+                        boxChild: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "404",
+                                    style: AppTheme.textStyle0
+                                        .copyWith(fontSize: 30),
+                                  ),
+                                  SizedBox(
+                                    height: AppTheme.paddingSmall,
+                                  ),
+                                  Text(
+                                    "Its so empty here...",
+                                    style: AppTheme.textStyle2,
+                                  ),
+                                  Text(
+                                    "Try lowering your prices 🤑",
+                                    style: AppTheme.textStyle2,
+                                  )
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                                child: SvgPicture.asset(
+                              'assets/svg/add_task.svg',
+                              width: 120,
+                              height: 120,
+                              semanticsLabel: 'Logo',
+                            ))
+                          ],
+                        ),
+                      )
+                    : SizedBox(
+                        height: 170,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
                           itemCount: ongoingTasks.length,
-                          padEnds: false,
-                          onPageChanged: (index) =>
-                              setState(() => _currentPage = index),
                           itemBuilder: (context, i) {
                             final task = ongoingTasks[i];
-                            return MyBox(
-                              backgroundColor:
-                                  i == 0 ? AppTheme.primaryColor : null,
-                              boxPadding: AppTheme.paddingMedium,
-                              boxChild: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                  right: AppTheme.paddingMedium),
+                              child: SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.80,
+                                child: MyBox(
+                                  backgroundColor:
+                                      i == 0 ? AppTheme.primaryColor : null,
+                                  boxPadding: AppTheme.paddingMedium,
+                                  boxChild: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
-                                      Text(
-                                        DateFormat('MMMM d, yyyy').format(
-                                            task.createdDate != null
-                                                ? DateTime.tryParse(
-                                                        task.createdDate) ??
-                                                    DateTime.now()
-                                                : DateTime.now()),
-                                        style: AppTheme.textStyle2.copyWith(
-                                          fontSize: 12,
-                                          color: i == 0
-                                              ? Colors.white
-                                              : AppTheme.primaryColor,
-                                        ),
-                                      ),
-                                      Icon(
-                                        FontAwesomeIcons.ellipsisVertical,
-                                        size: AppTheme.paddingMedium,
-                                        color: i == 0 ? Colors.white : null,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: AppTheme.paddingSmall),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        HugeIcons.strokeRoundedClean,
-                                        size: 32,
-                                        color: i == 0
-                                            ? Colors.white
-                                            : AppTheme.primaryColor,
-                                      ),
-                                      const SizedBox(
-                                          width: AppTheme.paddingTiny),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                      // Header with category icon and menu
+                                      Row(
                                         children: [
-                                          Text(
-                                            task.title,
-                                            style: AppTheme.textStyle0.copyWith(
-                                              fontSize: 16,
-                                              color:
-                                                  i == 0 ? Colors.white : null,
+                                          Icon(
+                                            _getCategoryIcon(task.category),
+                                            size: 38,
+                                            color: i == 0
+                                                ? Colors.white
+                                                : AppTheme.primaryColor,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              task.title,
+                                              style:
+                                                  AppTheme.textStyle0.copyWith(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold,
+                                                color: i == 0
+                                                    ? Colors.white
+                                                    : AppTheme.textColor,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          FutureBuilder<String?>(
-                                            future: userService.getUsernameById(task.runnerId.toString()),
-                                            builder: (context, snapshot) {
-                                              return Text(
-                                                snapshot.hasData 
-                                                    ? snapshot.data! 
-                                                    : 'Loading...',
-                                                style: AppTheme.textStyle2.copyWith(
-                                                  fontSize: 10,
-                                                  color:
-                                                      i == 0 ? Colors.white : null,
+                                          GestureDetector(
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      TaskDetailsScreen(
+                                                          task: task),
                                                 ),
                                               );
                                             },
+                                            child: Icon(
+                                              FontAwesomeIcons.ellipsisVertical,
+                                              size: 18,
+                                              color: i == 0
+                                                  ? Colors.white
+                                                  : AppTheme.primaryColor,
+                                            ),
                                           ),
                                         ],
                                       ),
+                                      // Description
+                                      const SizedBox(
+                                          height: AppTheme.paddingSmall),
+                                      // Runner info
+                                      FutureBuilder<String?>(
+                                        future: userService.getUsernameById(
+                                            task.runnerId.toString()),
+                                        builder: (context, snapshot) {
+                                          return Text(
+                                            '${snapshot.hasData ? snapshot.data! : 'Loading...'}',
+                                            style: AppTheme.textStyle1.copyWith(
+                                              color: i == 0
+                                                  ? Colors.white
+                                                  : AppTheme.textColor1,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 16),
+                                      // Message button at bottom
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed:
+                                              () {}, // Add message handler
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: i == 0
+                                                ? Colors.white
+                                                : AppTheme.primaryColor,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            "Message",
+                                            style: AppTheme.textStyle2.copyWith(
+                                              color: i == 0
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  const SizedBox(height: AppTheme.paddingSmall),
-                                  FloatingActionButton.small(
-                                    heroTag: 'ongoing_$i',
-                                    onPressed: () {}, // Add message handler
-                                    elevation: 0,
-                                    backgroundColor: i == 0
-                                        ? Colors.white
-                                        : AppTheme.primaryColor,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: AppTheme.borderRadius,
-                                    ),
-                                    child: Text(
-                                      "Message",
-                                      style: AppTheme.textStyle2.copyWith(
-                                        color: i == 0
-                                            ? Colors.black
-                                            : Colors.white,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             );
                           },
                         ),
-            ),
-
-            const SizedBox(height: AppTheme.paddingSmall),
-
-            // PageView indicators
-            if (!_isLoadingOngoing && ongoingTasks.isNotEmpty)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(ongoingTasks.length, (index) {
-                  final isActive = index == _currentPage;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: isActive ? 12 : 8,
-                    height: isActive ? 12 : 8,
-                    decoration: BoxDecoration(
-                      color:
-                          isActive ? AppTheme.primaryColor : Colors.grey[300],
-                      shape: BoxShape.circle,
-                    ),
-                  );
-                }),
-              ),
+                      ),
 
             const SizedBox(height: AppTheme.paddingLarge),
 

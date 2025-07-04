@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 import '../screens/task/task_details.dart';
+import '../screens/task/post_task_screen.dart';
 import 'my_box.dart';
 
 class TaskCard extends StatefulWidget {
@@ -14,6 +15,7 @@ class TaskCard extends StatefulWidget {
   final String? city;
   final VoidCallback? button2OnPress;
   final bool showActions;
+  final bool isButtonDisabled;
   const TaskCard({
     super.key,
     required this.task,
@@ -21,6 +23,7 @@ class TaskCard extends StatefulWidget {
     this.city,
     this.button2OnPress,
     this.showActions = true,
+    this.isButtonDisabled = false,
   });
 
   @override
@@ -133,7 +136,7 @@ class _TaskCardState extends State<TaskCard> {
                 Expanded(
                   child: FloatingActionButton.small(
                     elevation: 0,
-                    backgroundColor: AppTheme.dividerColor,
+                    backgroundColor: Colors.white,
                     child: Text(
                       selectedRole == "runner" ? "View details" : "Edit",
                       style: AppTheme.textStyle2.copyWith(
@@ -151,7 +154,13 @@ class _TaskCardState extends State<TaskCard> {
                           ),
                         );
                       } else {
-                        // TODO: Implement edit functionality
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                PostTaskScreen(taskToEdit: widget.task),
+                          ),
+                        );
                       }
                     },
                   ),
@@ -162,15 +171,22 @@ class _TaskCardState extends State<TaskCard> {
                     child: FloatingActionButton.small(
                       heroTag: widget.task.taskId,
                       elevation: 0,
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: widget.isButtonDisabled 
+                          ? AppTheme.disabledColor 
+                          : AppTheme.primaryColor,
                       child: Text(
                         widget.task.category.name == "EVENT_STAFFING"
                             ? "Apply"
                             : "Raise Offer",
                         style: AppTheme.textStyle1
-                            .copyWith(fontWeight: FontWeight.w500),
+                            .copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: widget.isButtonDisabled 
+                                  ? AppTheme.textColor1 
+                                  : Colors.white,
+                            ),
                       ),
-                      onPressed: widget.button2OnPress,
+                      onPressed: widget.isButtonDisabled ? null : widget.button2OnPress,
                     ),
                   )
                 else
@@ -192,7 +208,7 @@ class _TaskCardState extends State<TaskCard> {
                 Expanded(
                   child: FloatingActionButton.small(
                     elevation: 0,
-                    backgroundColor: AppTheme.dividerColor,
+                    backgroundColor: Colors.white,
                     child: Text(
                       "View details",
                       style: AppTheme.textStyle2.copyWith(

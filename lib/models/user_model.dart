@@ -6,6 +6,7 @@ class UserModel {
   final String phoneNumber;
   final String username;
   final bool isVerified;
+  final double balance;
 
   UserModel({
     required this.id,
@@ -15,6 +16,7 @@ class UserModel {
     required this.phoneNumber,
     required this.isVerified,
     required this.username,
+    required this.balance,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -26,6 +28,7 @@ class UserModel {
       email: map['email'] ?? '',
       phoneNumber: map['phoneNumber'] ?? '',
       isVerified: map['isVerified'] ?? false,
+      balance: (map['balance'] != null) ? (map['balance'] is int ? (map['balance'] as int).toDouble() : map['balance'] as double) : 0.0,
     );
   }
 
@@ -38,6 +41,7 @@ class UserModel {
       'email': email,
       'phoneNumber': phoneNumber,
       'isVerified': isVerified,
+      'balance': balance,
     };
   }
 }

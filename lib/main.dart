@@ -1,6 +1,7 @@
 import 'package:ali_grad/screens/get_started_screen.dart';
 import 'package:ali_grad/screens/home/home_screen_runner.dart';
 import 'package:ali_grad/screens/home/runner_shell.dart';
+import 'package:ali_grad/screens/messages_screen.dart';
 import 'package:ali_grad/screens/task/my_tasks_screen.dart';
 import 'package:ali_grad/screens/task/post_task_screen.dart';
 import 'package:ali_grad/screens/profile/edit_profile_screen.dart';
@@ -15,6 +16,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:ali_grad/screens/messages_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

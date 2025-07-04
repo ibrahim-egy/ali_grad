@@ -39,6 +39,12 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
 
   double _radius = 10; // Default radius in km
   final List<double> _radiusOptions = [2, 5, 10, 20, 50];
+  
+  // Track which tasks the runner has already offered/applied to
+  Map<int, bool> _hasOffered = {};
+  Map<int, bool> _hasApplied = {};
+  bool _isLoadingOfferStatus = false;
+  bool _hasAcceptedOffer = false;
 
   Future<void> onApplicationSubmit(
       {required int taskId, String? comment, String? resumeLink}) async {
@@ -78,7 +84,7 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
     // Validate authentication before proceeding
     final userService = UserService();
     final isTokenValid = await userService.isTokenValid();
-    
+
     if (!isTokenValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -115,8 +121,7 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text("You Have Placed an Offer ${amount.toString()} EGP")),
+            content: Text("You Have Placed an Offer ${amount.toString()} EGP")),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -144,7 +149,43 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
     if (!mounted) return;
     setState(() {
       acceptedTasks = tasks;
+      _hasAcceptedOffer = tasks.isNotEmpty;
     });
+  }
+
+  Future<void> checkOfferStatusForTasks() async {
+    setState(() => _isLoadingOfferStatus = true);
+    
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+    if (userId == null) {
+      setState(() => _isLoadingOfferStatus = false);
+      return;
+    }
+
+    final runnerId = int.parse(userId);
+    final Map<int, bool> hasOffered = {};
+    final Map<int, bool> hasApplied = {};
+
+    for (final task in nearTasks) {
+      if (task.category.name == 'EVENT_STAFFING') {
+        // Check if runner has applied to event
+        final hasAppliedToEvent = await eventApplicationService.hasRunnerApplied(task.taskId, runnerId);
+        hasApplied[task.taskId] = hasAppliedToEvent;
+      } else {
+        // Check if runner has offered on regular task
+        final hasOfferedOnTask = await offerService.hasRunnerOffered(task.taskId, runnerId);
+        hasOffered[task.taskId] = hasOfferedOnTask;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _hasOffered = hasOffered;
+        _hasApplied = hasApplied;
+        _isLoadingOfferStatus = false;
+      });
+    }
   }
 
   Future<void> fetchNearbyTasks() async {
@@ -175,6 +216,9 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
     setState(() {
       nearTasks = tasks;
     });
+    
+    // Check offer/application status for all tasks
+    await checkOfferStatusForTasks();
   }
 
   @override
@@ -189,25 +233,29 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
         child: ListView(
           padding: EdgeInsets.all(AppTheme.paddingMedium),
           children: [
-            GreetingBanner(name: "Ali", location: "Giza"),
+            GreetingBanner(location: "Giza"),
             SizedBox(height: AppTheme.paddingMedium),
             // Accepted (in progress) tasks section
             if (acceptedTasks.isNotEmpty) ...[
               FutureBuilder<String?>(
-                future: UserService().getUsernameById(acceptedTasks[0].taskPoster.toString()),
+                future: UserService()
+                    .getUsernameById(acceptedTasks[0].taskPoster.toString()),
                 builder: (context, snapshot) {
                   final posterName = snapshot.data ?? 'Poster';
                   return FutureBuilder<String?>(
-                    future: SharedPreferences.getInstance().then((prefs) => prefs.getString('userId')),
+                    future: SharedPreferences.getInstance()
+                        .then((prefs) => prefs.getString('userId')),
                     builder: (context, userIdSnapshot) {
                       return CurrentTaskCard(
                         title: acceptedTasks[0].title,
                         subtitle: acceptedTasks[0].description,
-                        poster: snapshot.connectionState == ConnectionState.waiting
-                            ? 'Loading...'
-                            : posterName,
-                        date: DateFormat('dd-MM-yyyy')
-                            .format(DateTime.parse(acceptedTasks[0].createdDate ?? DateTime.now().toIso8601String())),
+                        poster:
+                            snapshot.connectionState == ConnectionState.waiting
+                                ? 'Loading...'
+                                : posterName,
+                        date: DateFormat('dd-MM-yyyy').format(DateTime.parse(
+                            acceptedTasks[0].createdDate ??
+                                DateTime.now().toIso8601String())),
                         taskId: acceptedTasks[0].taskId,
                         userId: int.parse(userIdSnapshot.data ?? '0'),
                       );
@@ -285,6 +333,11 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
                     child: TaskCard(
                       distance: distance,
                       task: task,
+                      isButtonDisabled: _isLoadingOfferStatus 
+                          ? false 
+                          : (task.category.name == "EVENT_STAFFING"
+                              ? (_hasApplied[task.taskId] ?? false)
+                              : (_hasOffered[task.taskId] ?? false) || _hasAcceptedOffer),
                       button2OnPress: task.category.name != "EVENT_STAFFING"
                           ? () async {
                               showModalBottomSheet(

@@ -21,9 +21,7 @@ class _PosterShellState extends State<PosterShell> {
   static const _pages = [
     HomeScreenPoster(),
     MyTasksScreen(),
-    OffersScreen(),
     MessagesScreen(),
-    ProfileScreen(),
   ];
 
   @override
