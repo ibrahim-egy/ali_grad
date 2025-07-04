@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import '../../constants/theme.dart';
 import '../profile/profile_screen.dart';
 import '../runner_offers_screen.dart';
-import '../task/my_tasks_screen.dart';
+import '../task/my_tasks_screen_runner.dart';
 import 'home_screen_poster.dart';
 import 'home_screen_runner.dart';
-
-class BrowseScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Center(child: Text('Browse'));
-}
+import '../messages_tab.dart';
 
 class MyOffersScreen extends StatelessWidget {
   @override
@@ -33,9 +29,9 @@ class _RunnerShellState extends State<RunnerShell> {
 
   static const _pages = [
     HomeScreenRunner(),
-    MyTasksScreen(),
+    MyTasksScreenRunner(),
     RunnerOffersScreen(),
-    ProfileScreen(),
+    MessagesTab(),
   ];
 
   @override
@@ -59,19 +55,19 @@ class _RunnerShellState extends State<RunnerShell> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.explore),
-            label: 'Browse',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.assignment_outlined),
             activeIcon: Icon(Icons.assignment),
+            label: 'My Tasks',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_turned_in_outlined),
+            activeIcon: Icon(Icons.assignment_turned_in),
             label: 'My Offers',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat),
-            label: 'Chats',
+            label: 'Messages',
           ),
         ],
       ),

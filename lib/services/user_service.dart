@@ -8,6 +8,49 @@ import '../models/user_model.dart';
 class UserService {
   String authEndpoint = "http://10.0.2.2:8888";
 
+  /// Check if the current token is valid and not expired
+  Future<bool> isTokenValid() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        print("❌ No token found");
+        return false;
+      }
+
+      // Check if token is expired
+      if (JwtDecoder.isExpired(token)) {
+        print("❌ Token is expired");
+        return false;
+      }
+
+      print("✅ Token is valid and not expired");
+      return true;
+    } catch (e) {
+      print("❌ Error validating token: $e");
+      return false;
+    }
+  }
+
+  /// Get current token info for debugging
+  Future<Map<String, dynamic>?> getTokenInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        return null;
+      }
+
+      final decodedToken = JwtDecoder.decode(token);
+      return decodedToken;
+    } catch (e) {
+      print("❌ Error decoding token: $e");
+      return null;
+    }
+  }
+
   Future<bool> loginUser(
       {required String username,
       required String password,
@@ -169,5 +212,70 @@ class UserService {
   Future<String?> getUsernameById(String userId) async {
     final user = await getUserById(userId);
     return user?.username;
+  }
+
+  /// Handle invalid token by clearing stored data and redirecting to login
+  Future<void> handleInvalidToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('token');
+      await prefs.remove('userId');
+      await prefs.remove('email');
+      await prefs.remove('username');
+      await prefs.remove('role');
+      print("🔒 Cleared invalid token and user data");
+    } catch (e) {
+      print("❌ Error clearing invalid token: $e");
+    }
+  }
+
+  /// Check if user is currently logged in
+  Future<bool> isLoggedIn() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final userId = prefs.getString('userId');
+      
+      if (token == null || userId == null) {
+        return false;
+      }
+      
+      return await isTokenValid();
+    } catch (e) {
+      print("❌ Error checking login status: $e");
+      return false;
+    }
+  }
+
+  /// Debug method to print current authentication state
+  Future<void> debugAuthState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final userId = prefs.getString('userId');
+      final email = prefs.getString('email');
+      final username = prefs.getString('username');
+      final role = prefs.getString('role');
+
+      print("🔍 === AUTH DEBUG INFO ===");
+      print("Token exists: ${token != null}");
+      print("User ID: $userId");
+      print("Email: $email");
+      print("Username: $username");
+      print("Role: $role");
+
+      if (token != null) {
+        final isExpired = JwtDecoder.isExpired(token);
+        print("Token expired: $isExpired");
+        
+        if (!isExpired) {
+          final decodedToken = JwtDecoder.decode(token);
+          print("Token payload: $decodedToken");
+        }
+      }
+      print("==========================");
+    } catch (e) {
+      print("❌ Error in debug auth state: $e");
+    }
   }
 }

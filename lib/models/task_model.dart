@@ -244,7 +244,7 @@ class TaskResponse {
         "description": "d1",
         "type": "Assembly",
         "longitude": 30.95822,
-        "latitude": 30.002375,
+        "latitude": 31.002375,
         "additionalRequirements": {},
         "status": "IN_PROGRESS",
         "amount": 999.0,

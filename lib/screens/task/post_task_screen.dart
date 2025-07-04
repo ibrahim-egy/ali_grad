@@ -6,6 +6,7 @@ import '../../services/task_service.dart';
 import '../../utils/location.dart';
 import '../../widgets/inputBox.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../../services/user_service.dart';
 
 class PostTaskScreen extends StatefulWidget {
   const PostTaskScreen({Key? key}) : super(key: key);
@@ -83,8 +84,43 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
   Future<void> _submit() async {
     if (_selectedCategory == null) return;
     setState(() => _isSubmitting = true);
+    
+    // Validate token before proceeding
+    final userService = UserService();
+    
+    // Debug current auth state
+    await userService.debugAuthState();
+    
+    final isTokenValid = await userService.isTokenValid();
+    
+    if (!isTokenValid) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication failed. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      // Navigate to login screen
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final userId = int.tryParse(prefs.getString('userId') ?? '0') ?? 0;
+    
+    if (userId == 0) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User ID not found. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
+
     dynamic taskRequest;
     if (_selectedCategory == Category.EVENT_STAFFING) {
       taskRequest = EventStaffingTask(
@@ -138,7 +174,10 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
       Navigator.pushNamed(context, "/poster-home");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create task')),
+        const SnackBar(
+          content: Text('Failed to create task. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -663,7 +702,26 @@ class _PostTaskScreenState extends State<PostTaskScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Post a Task')),
+      appBar: AppBar(
+        title: const Text('Post a Task'),
+        actions: [
+          // Debug button for troubleshooting
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () async {
+              final userService = UserService();
+              await userService.debugAuthState();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Check console for auth debug info'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            tooltip: 'Debug Auth',
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppTheme.paddingLarge),
         child: Column(

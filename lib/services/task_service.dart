@@ -3,19 +3,41 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/task_model.dart';
+import '../services/user_service.dart';
 
 class TaskService {
   final String taskEndpoint = "http://10.0.2.2:8888/api/tasks";
+  final UserService _userService = UserService();
 
   Future<bool> postTask(taskRequest) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
+      final userId = prefs.getString('userId');
 
       if (token == null) {
-        print("No token found");
+        print("❌ No token found - User needs to login again");
+        await _userService.handleInvalidToken();
         return false;
       }
+
+      if (userId == null) {
+        print("❌ No userId found - User needs to login again");
+        await _userService.handleInvalidToken();
+        return false;
+      }
+
+      // Validate token before making request
+      final isTokenValid = await _userService.isTokenValid();
+      if (!isTokenValid) {
+        print("❌ Token is invalid or expired");
+        await _userService.handleInvalidToken();
+        return false;
+      }
+
+      print("🔑 Token found: ${token.substring(0, 20)}...");
+      print("👤 User ID: $userId");
+      print("📤 Request body: ${jsonEncode(taskRequest.toJson())}");
 
       final response = await http.post(
         Uri.parse("$taskEndpoint/postTask"),
@@ -26,9 +48,18 @@ class TaskService {
         body: jsonEncode(taskRequest.toJson()),
       );
 
+      print("📡 Response status: ${response.statusCode}");
+      print("📡 Response headers: ${response.headers}");
+      print("📡 Response body: ${response.body}");
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         print("✅ Task posted successfully");
         return true;
+      } else if (response.statusCode == 401) {
+        print("❌ Authentication failed - Token may be expired or invalid");
+        print("💡 Clearing invalid token and user data");
+        await _userService.handleInvalidToken();
+        return false;
       } else {
         print("❌ Failed to post task: ${response.statusCode}");
         print("Body: ${response.body}");

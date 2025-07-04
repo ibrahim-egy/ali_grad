@@ -75,30 +75,56 @@ class _HomeScreenRunnerState extends State<HomeScreenRunner> {
     required double amount,
     String? comment,
   }) async {
+    // Validate authentication before proceeding
+    final userService = UserService();
+    final isTokenValid = await userService.isTokenValid();
+    
+    if (!isTokenValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication failed. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('userId');
 
-    if (userId != null) {
-      Offer offerReq = Offer(
-        taskId: taskId,
-        runnerId: int.parse(userId),
-        amount: amount,
-        comment: comment ?? "",
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User ID not found. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
       );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
 
-      final success = await offerService.placeOffer(offerReq);
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text("You Have Placed an Offer ${amount.toString()} EGP")),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to place offer 😢")),
-        );
-      }
-      ;
+    Offer offerReq = Offer(
+      taskId: taskId,
+      runnerId: int.parse(userId),
+      amount: amount,
+      comment: comment ?? "",
+    );
+
+    final success = await offerService.placeOffer(offerReq);
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text("You Have Placed an Offer ${amount.toString()} EGP")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to place offer. Please try again."),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

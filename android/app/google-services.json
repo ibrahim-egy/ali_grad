@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "227423980180",
+    "project_id": "gigs-ali",
+    "storage_bucket": "gigs-ali.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227423980180:android:56a0dad63ab2770aea8281",
+        "android_client_info": {
+          "package_name": "com.example.ali_grad"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3vyfxNGdl4pU937OFs0I02oAjaVOq1-Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -14,6 +14,8 @@ import 'package:ali_grad/models/offer_model.dart';
 import 'package:ali_grad/services/event_application_service.dart';
 import 'package:ali_grad/models/event_application_model.dart';
 import 'package:ali_grad/screens/offers_screen.dart';
+import 'package:ali_grad/screens/chat_screen.dart';
+import 'package:ali_grad/services/dispute_service.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
   final TaskResponse task;
@@ -137,30 +139,56 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     required double amount,
     String? comment,
   }) async {
+    // Validate authentication before proceeding
+    final userService = UserService();
+    final isTokenValid = await userService.isTokenValid();
+    
+    if (!isTokenValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication failed. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('userId');
 
-    if (userId != null) {
-      Offer offerReq = Offer(
-        taskId: taskId,
-        runnerId: int.parse(userId),
-        amount: amount,
-        comment: comment ?? "",
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User ID not found. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
       );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
 
-      final success = await offerService.placeOffer(offerReq);
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text("You Have Placed an Offer ${amount.toString()} EGP")),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to place offer 😢")),
-        );
-      }
-      ;
+    Offer offerReq = Offer(
+      taskId: taskId,
+      runnerId: int.parse(userId),
+      amount: amount,
+      comment: comment ?? "",
+    );
+
+    final success = await offerService.placeOffer(offerReq);
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text("You Have Placed an Offer ${amount.toString()} EGP")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to place offer. Please try again."),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -283,6 +311,93 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 ),
               ],
             ),
+            // If the task is marked as DONE, show options to Raise Dispute or Mark as Completed
+            if (status == 'DONE')
+              Column(
+                children: [
+                  // --- Raise Dispute Button ---
+                  // This button allows the user to raise a dispute if there is an issue with the completed task.
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.report_gmailerrorred, color: Colors.white),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.urgentColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          // Show animated bottom sheet for dispute
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                            ),
+                            builder: (context) => _DisputeBottomSheet(
+                              taskId: task.taskId,
+                              // Use current user as complainant, other party as defendant
+                              getUserIds: () async {
+                                final prefs = await SharedPreferences.getInstance();
+                                final currentUserId = prefs.getString('userId');
+                                int complainantId = int.tryParse(currentUserId ?? '') ?? 0;
+                                int defendantId = selectedRole == 'runner'
+                                  ? (task.taskPoster is int ? task.taskPoster : int.tryParse(task.taskPoster.toString()) ?? 0)
+                                  : (task.runnerId != null ? (task.runnerId is int ? task.runnerId as int : int.tryParse(task.runnerId.toString()) ?? 0) : 0);
+                                return [complainantId, defendantId];
+                              },
+                            ),
+                          );
+                        },
+                        label: const Text(
+                          'Raise Dispute',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // --- Mark as Completed Button ---
+                  // This button allows the user to confirm the task is fully completed and close it.
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.check_circle, color: Colors.white),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.successColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          // TODO: Implement mark as completed logic
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Mark as completed feature coming soon!')),
+                          );
+                        },
+                        label: const Text(
+                          'Mark as Completed',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             if (selectedRole == 'runner')
               Padding(
                 padding: const EdgeInsets.only(top: 4, bottom: 8),
@@ -797,77 +912,73 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                         ),
                                         Row(
                                           children: [
+                                            // Chat button
                                             Container(
                                               decoration: BoxDecoration(
-                                                color: Colors.green
-                                                    .withOpacity(0.12),
+                                                color: Colors.blue.withOpacity(0.12),
                                                 shape: BoxShape.circle,
                                               ),
                                               child: IconButton(
-                                                icon: const Icon(Icons.check,
-                                                    color: Colors.green),
+                                                icon: const Icon(Icons.chat, color: Colors.blue),
+                                                tooltip: 'Chat with user',
+                                                onPressed: () async {
+                                                  final runnerId = offers![i].runnerId.toString();
+                                                  final runnerName = offerRunnerUsernames[offers![i].runnerId] ?? 'User';
+                                                  // Fetch current user info from SharedPreferences
+                                                  final prefs = await SharedPreferences.getInstance();
+                                                  final currentUserId = prefs.getString('userId') ?? '';
+                                                  final currentUsername = prefs.getString('username') ?? 'Me';
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) => ChatScreen(
+                                                        currentUserId: currentUserId,
+                                                        currentUsername: currentUsername,
+                                                        otherUserId: runnerId,
+                                                        otherUsername: runnerName,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            // Accept button
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.withOpacity(0.12),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(Icons.check, color: Colors.green),
                                                 tooltip: 'Accept',
                                                 onPressed: isProcessingOffer
                                                     ? null
                                                     : () async {
-                                                        setState(() =>
-                                                            isProcessingOffer =
-                                                                true);
-                                                        final success =
-                                                            await OfferService()
-                                                                .acceptOffer(
+                                                        setState(() => isProcessingOffer = true);
+                                                        final success = await OfferService().acceptOffer(
                                                           taskId: task.taskId,
-                                                          offerId: offers![i]
-                                                              .offerId,
-                                                          taskPosterId:
-                                                              task.taskPoster,
+                                                          offerId: offers![i].offerId,
+                                                          taskPosterId: task.taskPoster,
                                                         );
-                                                        setState(() =>
-                                                            isProcessingOffer =
-                                                                false);
+                                                        setState(() => isProcessingOffer = false);
                                                         if (success) {
-                                                          ScaffoldMessenger.of(
-                                                                  context)
-                                                              .showSnackBar(
-                                                            const SnackBar(
-                                                                content: Text(
-                                                                    'Offer accepted.')),
+                                                          ScaffoldMessenger.of(context).showSnackBar(
+                                                            const SnackBar(content: Text('Offer accepted.')),
                                                           );
                                                           // Refresh offers
-                                                          final fetchedOffers =
-                                                              await OfferService()
-                                                                  .getOffersForTask(
-                                                                      task.taskId);
-                                                          final usernameMap =
-                                                              <int, String>{};
-                                                          for (final offer
-                                                              in fetchedOffers) {
-                                                            final username =
-                                                                await UserService()
-                                                                    .getUsernameById(offer
-                                                                        .runnerId
-                                                                        .toString());
-                                                            if (username !=
-                                                                null) {
-                                                              usernameMap[offer
-                                                                      .runnerId] =
-                                                                  username;
+                                                          final fetchedOffers = await OfferService().getOffersForTask(task.taskId);
+                                                          final usernameMap = <int, String>{};
+                                                          for (final offer in fetchedOffers) {
+                                                            final username = await UserService().getUsernameById(offer.runnerId.toString());
+                                                            if (username != null) {
+                                                              usernameMap[offer.runnerId] = username;
                                                             }
                                                           }
                                                           setState(() {
-                                                            offers =
-                                                                fetchedOffers;
-                                                            offerRunnerUsernames =
-                                                                usernameMap;
+                                                            offers = fetchedOffers;
+                                                            offerRunnerUsernames = usernameMap;
                                                           });
-                                                        } else {
-                                                          ScaffoldMessenger.of(
-                                                                  context)
-                                                              .showSnackBar(
-                                                            const SnackBar(
-                                                                content: Text(
-                                                                    'Failed to accept offer.')),
-                                                          );
                                                         }
                                                       },
                                               ),
@@ -1013,6 +1124,37 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                                   ],
                                                 ),
                                               ),
+                                              // Chat button for applicant
+                                              Container(
+                                                margin: const EdgeInsets.only(left: 8, top: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.withOpacity(0.12),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: IconButton(
+                                                  icon: const Icon(Icons.chat, color: Colors.blue),
+                                                  tooltip: 'Chat with applicant',
+                                                  onPressed: () async {
+                                                    final applicantId = app.applicantId.toString();
+                                                    final applicantName = applicantUsernames[app.applicantId] ?? 'User';
+                                                    // Fetch current user info from SharedPreferences
+                                                    final prefs = await SharedPreferences.getInstance();
+                                                    final currentUserId = prefs.getString('userId') ?? '';
+                                                    final currentUsername = prefs.getString('username') ?? 'Me';
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => ChatScreen(
+                                                          currentUserId: currentUserId,
+                                                          currentUsername: currentUsername,
+                                                          otherUserId: applicantId,
+                                                          otherUsername: applicantName,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ))
@@ -1021,6 +1163,153 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   ),
                 ],
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Dispute Bottom Sheet Widget ---
+class _DisputeBottomSheet extends StatefulWidget {
+  final int taskId;
+  final Future<List<int>> Function() getUserIds;
+  const _DisputeBottomSheet({required this.taskId, required this.getUserIds});
+
+  @override
+  State<_DisputeBottomSheet> createState() => _DisputeBottomSheetState();
+}
+
+class _DisputeBottomSheetState extends State<_DisputeBottomSheet> with SingleTickerProviderStateMixin {
+  final TextEditingController _reasonController = TextEditingController();
+  final TextEditingController _evidenceController = TextEditingController();
+  bool _isSubmitting = false;
+  String? _error;
+  late AnimationController _animController;
+  late Animation<Offset> _offsetAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _offsetAnim = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    _reasonController.dispose();
+    _evidenceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _offsetAnim,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Raise a Dispute',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason',
+                border: OutlineInputBorder(),
+              ),
+              minLines: 2,
+              maxLines: 4,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _evidenceController,
+              decoration: const InputDecoration(
+                labelText: 'Evidence URLs (comma separated)',
+                border: OutlineInputBorder(),
+              ),
+              minLines: 1,
+              maxLines: 3,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!, style: const TextStyle(color: Colors.red)),
+            ],
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: _isSubmitting
+                  ? null
+                  : () async {
+                      setState(() {
+                        _isSubmitting = true;
+                        _error = null;
+                      });
+                      final ids = await widget.getUserIds();
+                      final reason = _reasonController.text.trim();
+                      final evidenceUris = _evidenceController.text
+                          .split(',')
+                          .map((e) => e.trim())
+                          .where((e) => e.isNotEmpty)
+                          .toList();
+                      if (reason.isEmpty) {
+                        setState(() {
+                          _error = 'Reason is required.';
+                          _isSubmitting = false;
+                        });
+                        return;
+                      }
+                      final success = await DisputeService().sendDispute(
+                        taskId: widget.taskId,
+                        complainantId: ids[0],
+                        defendantId: ids[1],
+                        reason: reason,
+                        evidenceUris: evidenceUris,
+                      );
+                      setState(() => _isSubmitting = false);
+                      if (success) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Dispute submitted successfully!')),
+                        );
+                      } else {
+                        setState(() {
+                          _error = 'Failed to submit dispute. Please try again.';
+                        });
+                      }
+                    },
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Send Request', style: TextStyle(fontSize: 16, color: Colors.white)),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

@@ -3,28 +3,73 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/event_application_model.dart';
 import '../models/task_model.dart';
+import '../services/user_service.dart';
 // import '../models/event_response.dart'; // Uncomment if you have this model
 
 class EventApplicationService {
   final String baseUrl = 'http://10.0.2.2:8888/api/events';
+  final UserService _userService = UserService();
 
   Future<bool> applyToEvent(EventApplication application) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    final url = Uri.parse('$baseUrl/apply');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final userId = prefs.getString('userId');
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(application.toJson()),
-    );
+      if (token == null) {
+        print("❌ No token found - User needs to login again");
+        await _userService.handleInvalidToken();
+        return false;
+      }
 
-    print(response.body);
+      if (userId == null) {
+        print("❌ No userId found - User needs to login again");
+        await _userService.handleInvalidToken();
+        return false;
+      }
 
-    return response.statusCode == 200;
+      // Validate token before making request
+      final isTokenValid = await _userService.isTokenValid();
+      if (!isTokenValid) {
+        print("❌ Token is invalid or expired");
+        await _userService.handleInvalidToken();
+        return false;
+      }
+
+      print("🔑 Token found: ${token.substring(0, 20)}...");
+      print("👤 User ID: $userId");
+      print("📤 Event application: ${jsonEncode(application.toJson())}");
+
+      final url = Uri.parse('$baseUrl/apply');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(application.toJson()),
+      );
+
+      print("📡 Apply to event response status: ${response.statusCode}");
+      print("📡 Response body: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("✅ Event application submitted successfully");
+        return true;
+      } else if (response.statusCode == 401) {
+        print("❌ Authentication failed - Token may be expired or invalid");
+        print("💡 Clearing invalid token and user data");
+        await _userService.handleInvalidToken();
+        return false;
+      } else {
+        print("❌ Failed to apply to event: ${response.statusCode}");
+        print("Body: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("❌ Error applying to event: $e");
+      return false;
+    }
   }
 
   Future<bool> cancelApplication(
